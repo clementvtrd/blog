@@ -1,8 +1,54 @@
 ---
 services:
+    traefik:
+        image: traefik:3.6
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.traefik=true"
+            - "traefik.http.routers.traefik.tls=true"
+            - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+        ports:
+            - 80:80
+            - 443:443
+        restart: unless-stopped
+        security_opt:
+            - no-new-privileges:true
+        volumes:
+            - ./certs:/etc/certs:ro
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - ./traefik/dynamic_conf.yaml:/etc/traefik/dynamic_conf.yaml:ro
+            - ./traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro
+
     node:
-        build:
-            context: .
-            dockerfile: docker/node/Dockerfile
+        build: docker/node
+        working_dir: /opt/blog
         volumes:
             - ./:/opt/blog:rw
+        deploy:
+            replicas: 0
+
+    api:
+        extends: node
+        deploy:
+            replicas: 1
+        entrypoint: pnpm
+        command: start:dev
+        working_dir: /opt/blog/apps/api
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.api.tls=true"
+            - "traefik.http.routers.api.rule=Host(`app.localhost`) && PathPrefix(`/api`)"
+            - "traefik.http.services.api.loadbalancer.server.port=3000"
+
+    web:
+        extends: node
+        deploy:
+            replicas: 1
+        entrypoint: pnpm
+        command: dev
+        working_dir: /opt/blog/apps/web
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.web.tls=true"
+            - "traefik.http.routers.web.rule=Host(`app.localhost`)"
+            - "traefik.http.services.web.loadbalancer.server.port=3000"
