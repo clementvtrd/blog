@@ -1,10 +1,12 @@
-allowBuilds:
-    "@nestjs/core@11.1.10": true
-    "unrs-resolver@1.11.1": true
-
 packages:
-    - ./apps/*
+  - ./apps/*
+
+allowBuilds:
+  '@nestjs/core@11.1.10': true
+  unrs-resolver@1.11.1: true
 
 autoInstallPeers: false
 
 catalogMode: manual
+
+nodeLinker: hoisted
